@@ -1,9 +1,5 @@
 {
   "mcpServers": {
-    "crawl4ai": {
-      "command": "uvx",
-      "args": ["crawl4ai-mcp"]
-    },
     "playwright": {
       "command": "npx",
       "args": ["@anthropic-ai/mcp-playwright"]
