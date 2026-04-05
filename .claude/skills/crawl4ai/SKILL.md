@@ -14,38 +14,19 @@ This skill provides comprehensive support for web crawling and data extraction u
 
 ## Quick Start
 
-### Installation Check
-```bash
-# Verify installation
-crawl4ai-doctor
+### Docker-based Execution
 
-# If issues, run setup
-crawl4ai-setup
-```
+This skill runs crawl4ai via Docker (`unclecode/crawl4ai:latest`). Use the wrapper script:
 
-### Basic First Crawl
-```python
-import asyncio
-from crawl4ai import AsyncWebCrawler
-
-async def main():
-    async with AsyncWebCrawler() as crawler:
-        result = await crawler.arun("https://example.com")
-        print(result.markdown[:500])  # First 500 chars
-
-asyncio.run(main())
-```
-
-### Using Provided Scripts
 ```bash
 # Simple markdown extraction
-python scripts/basic_crawler.py https://example.com
+.claude/skills/crawl4ai/crawl4ai.sh basic_crawler.py https://example.com
 
 # Batch processing
-python scripts/batch_crawler.py urls.txt
+.claude/skills/crawl4ai/crawl4ai.sh batch_crawler.py urls.txt
 
 # Data extraction
-python scripts/extraction_pipeline.py --generate-schema https://shop.com "extract products"
+.claude/skills/crawl4ai/crawl4ai.sh extraction_pipeline.py --generate-schema https://shop.com "extract products"
 ```
 
 ## Core Crawling Fundamentals
