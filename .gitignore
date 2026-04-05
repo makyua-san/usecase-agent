@@ -16,6 +16,15 @@ coverage/
 tmp/
 temp/
 
+# Data (local state, not committed)
+data/usecase.db
+data/usecase.db-wal
+data/usecase.db-shm
+data/raw/
+data/logs/
+data/plans/
+data/screenshots/
+
 # Python cache and virtualenvs
 __pycache__/
 *.py[cod]

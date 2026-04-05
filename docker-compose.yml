@@ -1,0 +1,12 @@
+services:
+  crawl4ai:
+    image: unclecode/crawl4ai:latest
+    ports:
+      - "11235:11235"
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+    restart: unless-stopped
+    environment:
+      - CRAWL4AI_API_TOKEN=local-dev

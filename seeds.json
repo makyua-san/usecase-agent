@@ -1,0 +1,88 @@
+[
+  {
+    "source_id": "hackernews_show_ai",
+    "url": "https://hn.algolia.com/api/v1/search?query=AI&tags=show_hn&hitsPerPage=30",
+    "name": "Hacker News (Show HN + AI)",
+    "category": "tech_community",
+    "depth": 2,
+    "trust_score": 0.5,
+    "crawl_strategy_json": {
+      "type": "api",
+      "list_selector": "$.hits[*]",
+      "content_selector": "$.hits[*].story_text",
+      "url_pattern": "https://news.ycombinator.com/item\\?id=\\d+",
+      "max_links": 20,
+      "wait_for": null,
+      "notes": "Algolia API returns JSON. list_selector extracts hits array. Follow item URLs for comments/discussion. Also check story_url for external links."
+    }
+  },
+  {
+    "source_id": "qiita_llm_genai",
+    "url": "https://qiita.com/tags/llm",
+    "name": "Qiita (LLM/生成AI tag)",
+    "category": "tech_blog_jp",
+    "depth": 2,
+    "trust_score": 0.5,
+    "crawl_strategy_json": {
+      "type": "html",
+      "list_selector": "article a[href*='/items/']",
+      "content_selector": "article.it-MdContent",
+      "url_pattern": "https://qiita\\.com/.+/items/[0-9a-f]+",
+      "max_links": 15,
+      "wait_for": "article",
+      "notes": "Public tag pages. Articles are structured HTML with clear content boundaries. Also check https://qiita.com/tags/生成AI for Japanese tag."
+    }
+  },
+  {
+    "source_id": "zenn_genai",
+    "url": "https://zenn.dev/topics/generativeai",
+    "name": "Zenn (生成AI topic)",
+    "category": "tech_blog_jp",
+    "depth": 2,
+    "trust_score": 0.5,
+    "crawl_strategy_json": {
+      "type": "html",
+      "list_selector": "article a[href*='/articles/']",
+      "content_selector": "section.znc",
+      "url_pattern": "https://zenn\\.dev/.+/articles/.+",
+      "max_links": 15,
+      "wait_for": "article",
+      "notes": "Public tech article platform. Clean HTML structure. Also check /topics/llm and /topics/chatgpt for related content."
+    }
+  },
+  {
+    "source_id": "note_genai",
+    "url": "https://note.com/search?q=%E7%94%9F%E6%88%90AI&context=note&mode=search",
+    "name": "note.com (生成AI tag)",
+    "category": "blog_platform_jp",
+    "depth": 1,
+    "trust_score": 0.5,
+    "crawl_strategy_json": {
+      "type": "html",
+      "list_selector": "a[href*='/n/']",
+      "content_selector": "div.note-common-styles__textnote-body",
+      "url_pattern": "https://note\\.com/.+/n/.+",
+      "max_links": 10,
+      "wait_for": "div[class*='searchResult']",
+      "notes": "WARNING: note.com has anti-bot measures. Use depth 1 only (list titles, do not fetch full content). Respect rate limits. If blocked, quarantine immediately."
+    }
+  },
+  {
+    "source_id": "developersio_ai",
+    "url": "https://dev.classmethod.jp/tags/generative-ai/",
+    "name": "DevelopersIO (classmethod blog)",
+    "category": "tech_blog_jp",
+    "depth": 2,
+    "trust_score": 0.5,
+    "crawl_strategy_json": {
+      "type": "html",
+      "list_selector": "a.postList_link[href*='dev.classmethod.jp']",
+      "content_selector": "div.entry-content",
+      "url_pattern": "https://dev\\.classmethod\\.jp/articles/.+",
+      "max_links": 15,
+      "wait_for": "div.postList",
+      "rss_url": "https://dev.classmethod.jp/tags/generative-ai/feed/",
+      "notes": "High-quality AWS/cloud tech blog. Prefer RSS feed when available for more reliable parsing. Articles tend to be Level A or B with good technical detail."
+    }
+  }
+]
