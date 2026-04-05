@@ -40,3 +40,7 @@ venv/
 Thumbs.db
 
 気づき.md
+
+package-lock.json
+
+escape
