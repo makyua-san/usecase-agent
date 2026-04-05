@@ -69,7 +69,7 @@ async function main() {
       "--dangerously-skip-permissions",
       "--model", "sonnet",
       "--max-turns", "50",
-      "--prompt", promptContent,
+      promptContent,
     ],
     { stdout: "pipe", stderr: "pipe" }
   );

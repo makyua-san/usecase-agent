@@ -1,5 +1,59 @@
 # CLAUDE.md
 
+## Project overview
+
+生成AIの実運用事例を自律的に収集・分類するリサーチエージェント。
+Claude Code を headless モードで動かし、Crawl4AI (Docker) でWebページを取得、SQLite に結果を蓄積する。
+
+### Tech stack
+
+- **Runtime:** Bun (TypeScript)
+- **AI Agent:** Claude Code CLI (`claude --print`)
+- **Web Crawling:** Crawl4AI (Docker, port 11235)
+- **Database:** SQLite (WAL mode) — `data/usecase.db`
+- **Tool Manager:** mise (bun, node, python)
+
+### Key files
+
+| File | Role |
+|------|------|
+| `harness.ts` | オーケストレーション: Docker確認、CC起動、30分タイムアウト、ログ管理 |
+| `agent-prompt.md` | エージェント行動指示 (9ステップワークフロー、分類ルール、タグ体系) |
+| `init-db.ts` | SQLite スキーマ初期化 + シードデータ投入 (冪等) |
+| `eval.ts` | 品質分類の精度測定 (10テストケース、目標 >70%) |
+| `seeds.json` | 初期ソース定義 (Hacker News, Qiita, Zenn, note.com, DevelopersIO) |
+| `requirements.md` | 設計要件書・意思決定の根拠 |
+
+### Commands
+
+```bash
+# セットアップ
+mise install
+mkdir -p data/raw data/logs data/plans
+bun run init-db.ts
+docker compose up -d
+
+# 実行
+bun run harness.ts          # 単発実行
+bun run eval.ts             # 分類精度テスト
+
+# 確認
+sqlite3 data/usecase.db "SELECT level, title FROM cases ORDER BY created_at DESC LIMIT 20"
+```
+
+### Classification levels
+
+- **A:** 実運用知見あり (who + what + how のうち2つ以上が明確) → markdown保存
+- **B:** 事例は見えるが詳細不足 → メタデータのみ
+- **C:** シグナルのみ (ニュース・イベント) → メタデータのみ
+
+### Data directories (gitignored)
+
+- `data/usecase.db` — SQLite DB
+- `data/raw/` — Level A/B のmarkdownエクスポート
+- `data/logs/` — 実行ログ
+- `data/plans/` — next_plan.json 履歴
+
 ## Language
 
 This project is Japanese-first.
@@ -12,6 +66,14 @@ This project is Japanese-first.
 ## gstack
 
 For all web browsing, use the `/browse` skill from gstack. Never use `mcp__claude-in-chrome__*` tools.
+
+## crawl4ai
+
+For web crawling, scraping, markdown extraction, structured data extraction, and batch URL processing, use the local `crawl4ai` skill in `.claude/skills/crawl4ai/`.
+
+- Do not use Crawl4AI via MCP in this project.
+- Prefer the bundled `crawl4ai` skill and its Docker-based wrapper scripts.
+- Even if external docs mention MCP setup, follow this repository's skill-based workflow first.
 
 ### Available skills
 
@@ -60,6 +122,7 @@ Key routing rules:
 - Bugs, errors, "why is this broken", 500 errors → invoke investigate
 - Ship, deploy, push, create PR → invoke ship
 - QA, test the site, find bugs → invoke qa
+- Web crawling, scraping, markdown extraction, structured extraction → invoke crawl4ai
 - Code review, check my diff → invoke review
 - Update docs after shipping → invoke document-release
 - Weekly retro → invoke retro

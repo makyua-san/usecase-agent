@@ -104,7 +104,7 @@ ${EVAL_CASES.map((c, i) => `[${i}] Title: ${c.title}\nText: ${c.text}\n`).join("
       "--dangerously-skip-permissions",
       "--model", "sonnet",
       "--max-turns", "1",
-      "--prompt", classifyPrompt,
+      classifyPrompt,
     ],
     { stdout: "pipe", stderr: "pipe" }
   );
