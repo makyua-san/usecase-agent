@@ -69,8 +69,8 @@ cd usecase-agent
 # bun を mise 経由でインストール
 mise install
 
-# Claude Code CLI のインストールと認証
-npm install -g @anthropic-ai/claude-code
+# Claude のインストールと認証
+curl -fsSL https://claude.ai/install.sh | bash
 claude login
 ```
 
@@ -105,18 +105,43 @@ curl -s http://localhost:11235/health || echo "まだ起動中..."
 
 ### 5. MCP サーバーの準備
 
-`.claude/mcp.json` に Crawl4AI MCP と Playwright MCP を設定済み。
-依存パッケージのインストール:
+Crawl4AI の MCP は Docker で動かす前提。
+このリポジトリの `.claude/mcp.json` にも同じ設定を置いているが、Cursor で常用する場合は Global MCP Configuration (`~/.cursor/mcp.json`) に追加しておくとよい。
+
+Option A1: Use Pre-built Image (Fastest) ⚡
+
+事前セットアップなしで、公開済みイメージを pull してそのまま使える。
 
 ```bash
-# Crawl4AI MCP (Python/uvx 経由)
-pip install uvx crawl4ai-mcp
-
-# Playwright MCP (Node 経由)
-npx @anthropic-ai/mcp-playwright
+docker pull uysalsadi/crawl4ai-mcp-server:latest
 ```
 
-> MCP の設定は `.claude/mcp.json` を参照。Crawl4AI MCP が動かない場合、Playwright MCP にフォールバックする設計。
+`~/.cursor/mcp.json` に追加する例:
+
+```json
+{
+  "mcpServers": {
+    "crawl4ai-mcp": {
+      "command": "docker",
+      "args": [
+        "run",
+        "--rm",
+        "-i",
+        "--volume",
+        "/tmp/crawl4ai-crawls:/app/crawls",
+        "uysalsadi/crawl4ai-mcp-server:latest"
+      ],
+      "env": {
+        "CRAWL4AI_MCP_LOG": "INFO"
+      }
+    }
+  }
+}
+```
+
+✅ この設定は動作確認済み。
+
+> リポジトリ内の `.claude/mcp.json` も同じ Docker 設定にしてあるので、必要に応じてそちらを参照・流用できる。
 
 ## 使い方
 
@@ -179,7 +204,6 @@ usecase-agent/
 ├── eval.ts                品質分類の精度測定
 ├── seeds.json             初期ソース定義 (5件)
 ├── docker-compose.yml     Crawl4AI Docker
-├── .claude/mcp.json       MCP サーバー設定
 ├── requirements.md        設計要件書
 └── data/                  (gitignore)
     ├── usecase.db         SQLite データベース
