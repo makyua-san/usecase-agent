@@ -71,6 +71,19 @@ This project is Japanese-first.
 - Even when a skill, tool, prompt, or external documentation is written in English, keep the working conclusion and user-facing output in Japanese.
 - Do not let the default language of a skill override this rule. If a skill assumes English, use the skill internally but translate/adapt the result into natural Japanese before presenting it.
 
+## codex
+
+This project uses a codex wrapper at `scripts/codex` instead of the system `codex` command.
+The wrapper fixes a mise shim + Windows .cmd multiline argument bug.
+
+When invoking codex, always prepend `scripts/` to PATH so the wrapper is found first:
+```bash
+export PATH="$(git rev-parse --show-toplevel)/scripts:$PATH"
+```
+
+This makes `which codex` resolve to the wrapper automatically.
+gstack skills that call `which codex` will pick up the wrapper without modification.
+
 ## gstack
 
 For all web browsing, use the `/browse` skill from gstack. Never use `mcp__claude-in-chrome__*` tools.

@@ -1,0 +1,32 @@
+#!/bin/bash
+# codex wrapper: fixes mise shim + Windows .cmd multiline argument bug
+# mise's bash shim passes args through a .cmd batch file, which breaks
+# on multiline strings. This wrapper detects multiline prompts and
+# pipes them via stdin instead.
+#
+# Usage: same as codex CLI. Drop-in replacement.
+#   scripts/codex exec "prompt" -s read-only ...
+
+REAL_CODEX=$(mise which codex 2>/dev/null)
+if [ -z "$REAL_CODEX" ]; then
+  echo "ERROR: codex not found via mise" >&2
+  exit 1
+fi
+
+# If subcommand is "exec" and the prompt (2nd arg) contains newlines,
+# rewrite to stdin mode to avoid .cmd argument corruption.
+if [ "$1" = "exec" ] && [ -n "$2" ]; then
+  prompt="$2"
+  shift 2  # remove "exec" and prompt, keep remaining flags
+
+  if printf '%s' "$prompt" | grep -q $'\n'; then
+    # Multiline: pipe via stdin
+    printf '%s' "$prompt" | "$REAL_CODEX" exec - "$@"
+  else
+    # Single line: pass normally
+    "$REAL_CODEX" exec "$prompt" "$@"
+  fi
+else
+  # All other subcommands: pass through
+  "$REAL_CODEX" "$@"
+fi
