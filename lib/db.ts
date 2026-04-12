@@ -9,7 +9,7 @@ let _db: Database | null = null;
 export function getDb(options?: { create?: boolean }): Database {
   if (_db) return _db;
 
-  _db = new Database(DB_PATH, { create: options?.create ?? false });
+  _db = new Database(DB_PATH, { create: options?.create ?? true });
   _db.run("PRAGMA journal_mode=WAL");
   _db.run("PRAGMA busy_timeout=5000");
 
