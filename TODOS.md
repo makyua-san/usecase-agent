@@ -136,3 +136,31 @@
     ```
 - **影響範囲:** scripts/ (新規)、dashboard/server/index.ts (healthエンドポイント追加)、README.md (デプロイセクション更新)
 - **Depends on:** Phase 1テストrun実行（実際に動くことの確認が先）
+
+### W-006: 事例データへのスコアリング
+- **What:** 収集した各事例（casesテーブル）に品質スコアを付与する仕組み。現在のLevel A/B/Cは粗い3段階分類だが、同じLevel A内でも「圧倒的に良い事例」と「ギリギリA」がある。この差を数値で表現する。
+- **Why:** YouTube/ブログのコンテンツ選定で「Level Aの中から特に良いものを選ぶ」作業が発生する。スコアがあればソートするだけ。また、エージェントの分類精度の改善にもフィードバックとして使える。
+- **検討事項:**
+  - **スコアの軸（案）:**
+    - `detail_score` (0-10): 技術的詳細度。アーキテクチャ図、コード例、設定値、メトリクスの有無
+    - `novelty_score` (0-10): 新規性。既存事例との差分。「またRAGの話」vs「初めて見るアプローチ」
+    - `actionability_score` (0-10): 実践可能度。読者が自分で再現できるか
+    - `composite_score` (0-10): 総合スコア（上記の加重平均）
+  - **スコアの生成タイミング:**
+    - エージェントが分類時に同時生成（agent-prompt.md Step 5cに追加）
+    - 既存事例には一括バッチで後付け可能にする
+  - **スキーマ拡張:**
+    ```sql
+    ALTER TABLE cases ADD COLUMN detail_score REAL;
+    ALTER TABLE cases ADD COLUMN novelty_score REAL;
+    ALTER TABLE cases ADD COLUMN actionability_score REAL;
+    ALTER TABLE cases ADD COLUMN composite_score REAL;
+    ```
+  - **ダッシュボード連携:**
+    - Cases画面でcomposite_scoreでソート可能にする
+    - スコアバー or 星表示で視覚化
+    - 「コンテンツ候補 Top 10」ビュー（composite_score上位）
+  - **W-003との関係:** インサイト生成（W-003）とスコアリング（W-006）は補完関係。スコアが高い事例のインサイトがコンテンツの素材になる。
+  - **W-004との関係:** スコアリング基準自体もサジェスト対象にできる（「detail_scoreの重みを上げるべき」等）
+- **影響範囲:** agent-prompt.md（Step 5c拡張）、init-db.ts（スキーマ拡張）、dashboard/server/routes/cases.ts（ソート追加）、dashboard/client/pages/Cases.tsx（スコア表示）
+- **Depends on:** W-002（スキーマ変更の安全な仕組みが先）

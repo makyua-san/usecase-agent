@@ -46,3 +46,5 @@ bun.lock
 
 escape
 requirements.md
+.gstack/
+.claude/skills/gstack/
