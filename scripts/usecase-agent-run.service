@@ -1,0 +1,36 @@
+[Unit]
+Description=usecase-agent Run (one-shot)
+After=network.target docker.service
+Requires=docker.service
+# 同時実行防止: 前回がまだ動いていたらスキップ
+ConditionPathExists=!/run/usecase-agent/run.lock
+
+[Service]
+Type=oneshot
+User=__USER__
+WorkingDirectory=__PROJECT_DIR__
+EnvironmentFile=__PROJECT_DIR__/.env
+RuntimeDirectory=usecase-agent
+
+# Security hardening
+PrivateTmp=yes
+NoNewPrivileges=yes
+ReadWritePaths=__PROJECT_DIR__/data
+
+# Pre-run: バックアップ
+ExecStartPre=/bin/bash __PROJECT_DIR__/scripts/backup-db.sh
+
+# ロック取得
+ExecStartPre=/bin/touch /run/usecase-agent/run.lock
+
+# 本体実行
+ExecStart=__BUN_PATH__ run harness.ts
+
+# Post-run: 通知 (成功時のみ。ハイフン付きでエラー無視)
+ExecStartPost=-/bin/bash __PROJECT_DIR__/scripts/notify.sh
+
+# ロック解放: 成功・失敗・クラッシュ問わず必ず実行
+ExecStopPost=/bin/rm -f /run/usecase-agent/run.lock
+
+# タイムアウト (harness.tsの30分 + バッファ5分)
+TimeoutStartSec=2100

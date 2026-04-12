@@ -1,0 +1,20 @@
+# usecase-agent reverse proxy
+# Usage:
+#   1. Install Caddy: sudo apt install -y caddy
+#   2. Replace 'your-domain.example.com' with your actual domain
+#   3. Copy: sudo cp scripts/Caddyfile /etc/caddy/Caddyfile
+#   4. Reload: sudo systemctl reload caddy
+#
+# Caddy automatically obtains and renews Let's Encrypt certificates.
+# Ensure ports 80 and 443 are open in your firewall/security group.
+
+your-domain.example.com {
+    reverse_proxy localhost:3000
+    encode gzip
+
+    # Basic auth (optional, uncomment and set password)
+    # Generate hash: caddy hash-password
+    # basicauth /* {
+    #     admin $2a$14$...
+    # }
+}

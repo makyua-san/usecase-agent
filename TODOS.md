@@ -164,3 +164,15 @@
   - **W-004との関係:** スコアリング基準自体もサジェスト対象にできる（「detail_scoreの重みを上げるべき」等）
 - **影響範囲:** agent-prompt.md（Step 5c拡張）、init-db.ts（スキーマ拡張）、dashboard/server/routes/cases.ts（ソート追加）、dashboard/client/pages/Cases.tsx（スコア表示）
 - **Depends on:** W-002（スキーマ変更の安全な仕組みが先）
+
+### W-007: マルチエージェント並列実行
+- **What:** harness.tsをパラメタ化して、複数テーマ（例: 生成AI、MLOps、データエンジニアリング）のエージェントを並列実行できるようにする
+- **Why:** 1つのテーマだけでは収集範囲が限定される。複数テーマを並列で回すことで、「複数のリサーチャーが同時に動いている」状態を実現する。
+- **検討事項:**
+  - 各テーマが別のagent-prompt.mdと別のseeds.jsonを持つ
+  - SQLite WALモードの同時書き込み制約（busy_timeout拡大が必要かも）
+  - systemd templateユニット（`usecase-agent-run@.service`）でテーマをパラメータ化
+  - ダッシュボードでテーマ別フィルタリング
+- **影響範囲:** harness.ts（パラメータ化）、agent-prompt.md（テーマ別分離）、seeds.json（テーマ別分離）、systemd units
+- **Phase:** Phase 1が安定運用に入ってから。W-005デプロイ後の次ステップ。
+- **Depends on:** W-005（デプロイ基盤が先）

@@ -1,0 +1,20 @@
+[Unit]
+Description=usecase-agent Dashboard
+After=network.target
+
+[Service]
+Type=simple
+User=__USER__
+WorkingDirectory=__PROJECT_DIR__
+EnvironmentFile=__PROJECT_DIR__/.env
+ExecStart=__BUN_PATH__ run dashboard/server/index.ts
+Restart=on-failure
+RestartSec=5
+
+# Security hardening
+PrivateTmp=yes
+NoNewPrivileges=yes
+ReadWritePaths=__PROJECT_DIR__/data
+
+[Install]
+WantedBy=multi-user.target
