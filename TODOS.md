@@ -2,34 +2,137 @@
 
 ## Phase 1 バックポート
 
-### run_id 統一 (CRITICAL - Phase 2 の前提条件)
-- **What:** harness.ts が run_id を生成し、runsテーブルにINSERT、agent-prompt.md の環境変数として注入。agent-prompt.md の Step 1 から run_id 生成を削除。
-- **Why:** 現状 harness.ts (`run-{Date.now()}`) と agent-prompt.md (`date +%Y%m%d_%H%M%S`) で run_id が異なる。DB の run_id からログファイルを見つけられない。
-- **Depends on:** なし
+### ~~run_id 統一~~ ✅ 完了 (2026-04-12)
+- harness.ts が run_id を生成し DB に INSERT、agent-prompt.md に注入するように変更済み。
 
 ### Phase 1 テストスイート
 - **What:** harness.ts、init-db.ts、eval.ts のユニットテスト (bun:test)
-- **Why:** Phase 1 にテストが0件。run_id統一のバックポート後、リグレッション防止が必要。
-- **Depends on:** run_id 統一完了後
+- **Why:** Phase 1 にテストが0件。リグレッション防止が必要。
+- **Depends on:** なし
 
 ### Phase 1 テストrun実行
 - **What:** harness.ts を実行して実際のrunデータを生成。ログの構造化度を確認。
 - **Why:** ダッシュボード開発には実データが必要。ログパーサーの設計も実ログを見てから。
-- **Depends on:** run_id 統一完了後、Crawl4AI Docker + Claude Code 認証が必要
+- **Depends on:** Crawl4AI Docker + Claude Code 認証が必要
 
 ## Phase 2 設計補足
 
-### lib/db.ts 共通化
-- **What:** プロジェクトルートに lib/db.ts を作成。DB接続 (パス解決、PRAGMA WAL、busy_timeout=5000) を共通化。init-db.ts と dashboard/server/ の両方から使う。
-- **Why:** DRY。DB接続パターンの重複を防止。
-- **Depends on:** なし
+### ~~lib/db.ts 共通化~~ ✅ 完了 (2026-04-12)
+### ~~Dashboard stats 集約エンドポイント~~ ✅ 完了 (2026-04-12)
+### ~~API JSON フィールドのパース~~ ✅ 完了 (2026-04-12)
 
-### Dashboard stats 集約エンドポイント
-- **What:** GET /api/dashboard/stats を追加。総ケース数、Level分布、アクティブソース数、最新run、Top/Bottomソース、最新reflectionを1レスポンスで返す。
-- **Why:** Dashboard画面の6つの集計クエリを1リクエストに集約。
-- **Depends on:** API サーバー実装
+---
 
-### API JSON フィールドのパース
-- **What:** tags_json、source_evaluations_json、crawl_strategy_json をAPI側でパースしてオブジェクト/配列として返す。
-- **Why:** フロントエンドの毎回 JSON.parse() を排除。
-- **Depends on:** API サーバー実装
+## 要望リスト (次サイクルのフィードバック)
+
+以下はユーザーからの要望。次の開発サイクルで検討・実装する候補。
+
+### W-001: ダッシュボードからrunを実行キック
+- **What:** ダッシュボードUI上のボタンからエージェントのrunを起動できるようにする
+- **Why:** 現状は `bun run harness.ts` をターミナルで手動実行する必要がある。ダッシュボードから直接テスト実行できれば、UI上で「実行→結果確認→改善」のループが完結する。
+- **検討事項:**
+  - APIエンドポイント `POST /api/runs/start` を追加し、サーバー側でharness.tsを子プロセスとして起動
+  - run中のリアルタイムステータス表示（ポーリング or SSE）
+  - 同時実行の防止（既にrunning中なら起動不可）
+  - タイムアウト・キャンセルのUI操作
+- **影響範囲:** dashboard/server/routes/runs.ts、dashboard/client/pages/Runs.tsx、harness.ts（子プロセス起動対応）
+- **Phase:** 読み取り専用→書き込み可能への転換点。Phase 3 (HITL) の入り口になる。
+- **Depends on:** Phase 1テストrun実行（まず手動で動作確認してから）
+
+### W-002: 蓄積データの保護（ノウハウ・事例の不変性保証）
+- **What:** 機能追加・リファクタ時に、既に収集した事例データやエージェントのノウハウ（reflections、trust_score履歴）が壊れないことを保証する仕組み
+- **Why:** このプロジェクトの価値の本体は「蓄積されたデータ」。コードは書き直せるがデータは取り戻せない。機能追加のたびにDBマイグレーションやスキーマ変更でデータが飛ぶリスクがある。
+- **検討事項:**
+  - DBマイグレーションの仕組み導入（init-db.tsの「CREATE IF NOT EXISTS」だけでは列追加・変更に対応できない）
+  - データのバックアップ自動化（run前にDB snapshot）
+  - casesテーブルの既存行は更新・削除不可のルール（append-only）
+  - reflectionsも同様にimmutable
+  - テストスイートにデータ整合性テスト追加（既存データが読めることを確認するスモークテスト）
+- **影響範囲:** init-db.ts、harness.ts、dashboard全API
+- **Depends on:** Phase 1テストスイート
+
+### W-003: 事例からの考察・学び（インサイト生成）
+- **What:** 収集した事例を単に一覧表示するだけでなく、「この事例から見える考察」「学べること」をエージェントが生成し、ダッシュボードに表示する
+- **Why:** 事例の生データだけではYouTube/ブログのコンテンツにしにくい。「だからどうなのか」まで含めて提示することで、コンテンツ作成の効率が上がる。
+- **検討事項:**
+  - casesテーブルに `insights` カラム追加（エージェントが分類時に同時生成）
+  - 複数事例の横断分析：「同じ業界で3社がRAGを導入→業界トレンドとして見える」
+  - タグクラスタリング：同じタグの事例が増えてきたら「注目トレンド」としてダッシュボードに表示
+  - Cases画面の展開詳細に「考察」セクション追加
+  - agent-prompt.mdに「事例ごとにinsight（この事例から学べる1-2文）を生成する」ステップ追加
+- **影響範囲:** agent-prompt.md（Step 5c追加）、init-db.ts（スキーマ拡張）、dashboard Cases画面
+- **Depends on:** W-002（スキーマ変更の安全な仕組みが先）
+
+### W-004: 評価指標のサジェスト & ユーザー承認フロー
+- **What:** エージェントが自身の評価指標（分類基準、trust_score計算式、ソース選定戦略など）の改善をサジェストするが、勝手には変更しない。ダッシュボードからユーザーが承認して初めて適用される。
+- **Why:** エージェントの自己改善は重要だが、「勝手に基準を変えて品質が下がった」は最悪のシナリオ。Human-in-the-loopの核心部分。
+- **検討事項:**
+  - **サジェスト生成:** エージェントがrun中のreflectionで「この基準を変えるべき」と気づいたら、`suggestions`テーブルに書き込む（直接agent-prompt.mdは変更しない）
+  - **suggestionsテーブル設計:**
+    ```sql
+    CREATE TABLE suggestions (
+      suggestion_id TEXT PRIMARY KEY,
+      run_id TEXT REFERENCES runs(run_id),
+      category TEXT,          -- 'classification', 'trust_score', 'source_strategy', 'tag_system'
+      current_value TEXT,     -- 現在の設定値
+      proposed_value TEXT,    -- 提案する変更
+      reasoning TEXT,         -- なぜこの変更を提案するか
+      evidence TEXT,          -- 根拠となるデータ（事例数、精度変化など）
+      status TEXT DEFAULT 'pending',  -- 'pending', 'accepted', 'rejected'
+      decided_at TEXT,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+    ```
+  - **ダッシュボード表示:** 新しい「設定提案」ページ or Dashboard画面に通知バッジ
+  - **承認フロー:** ユーザーがサジェストを確認→ Accept / Reject → Acceptした場合、次回runで適用
+  - **適用メカニズム:** 承認済みサジェストをエージェントが次回run時に読み込み、行動に反映
+  - **カテゴリ例:**
+    - `classification`: 「Level Bの基準を厳しくすべき。現在Level Bに分類されているものの60%がLevel Cに近い」
+    - `trust_score`: 「note.comのtrust_scoreをリセットすべき。最近3runで品質が改善している」
+    - `source_strategy`: 「新しいソースを追加すべき: dev.toのAIタグ」
+    - `tag_system`: 「新タグ"agent"を追加すべき。最近の事例の30%がエージェント関連」
+- **影響範囲:** init-db.ts（suggestionsテーブル追加）、agent-prompt.md（サジェスト生成ステップ）、dashboard/server/routes/suggestions.ts（新規）、dashboard/client/pages/Suggestions.tsx（新規）
+- **Phase:** Phase 3 (HITL) の中核機能。W-001（runキック）と組み合わせて「サジェスト確認→承認→runキック→結果確認」の完全ループが実現する。
+- **Depends on:** W-001, W-002
+
+### W-005: Ubuntuサーバーへのデプロイ & 自動実行 ⚡ 優先度高
+- **What:** Ubuntuサーバー上でエージェントのcron自動実行 + ダッシュボードの常時起動を1コマンドでセットアップできるデプロイ構成を定義する
+- **Why:** 現状はローカルで手動実行のみ。「寝ている間にエージェントが動いて、朝起きたらダッシュボードで結果確認」がこのプロジェクトの本来の姿。
+- **検討事項:**
+  - **セットアップスクリプト (`scripts/deploy.sh`):**
+    - mise + bun インストール確認
+    - Docker + docker compose 確認、Crawl4AI起動
+    - `bun install` (dashboard依存)
+    - `bun run init-db.ts`
+    - `bun run build` (dashboard本番ビルド)
+    - Claude Code CLI 認証確認 (`claude --version`)
+    - systemd ユニットファイル生成
+  - **systemd サービス (2つ):**
+    - `usecase-agent.service`: ダッシュボードサーバー (`bun run dashboard/server/index.ts`) を常時起動。再起動ポリシー付き。
+    - `usecase-agent.timer` + `usecase-agent-run.service`: harness.ts を定期実行（systemd timer。cronより管理しやすい）。
+  - **実行スケジュール:**
+    - デフォルト: 毎時0分 (`OnCalendar=*-*-* *:00:00`)
+    - 設定可能にする（環境変数 or 設定ファイル）
+  - **ログ管理:**
+    - systemd journal に統合（`journalctl -u usecase-agent` で確認可能）
+    - data/logs/ のrun別ログも従来通り保持
+  - **ダッシュボードのアクセス:**
+    - デフォルトは `localhost:3000` のみ
+    - リバースプロキシ（nginx/caddy）設定はオプションで案内
+  - **環境変数管理:**
+    - `.env` ファイルから読み込み（ANTHROPIC_API_KEY等）
+    - systemd の `EnvironmentFile=` ディレクティブで注入
+  - **ヘルスチェック:**
+    - ダッシュボードサーバーのヘルスエンドポイント `GET /api/health`
+    - Crawl4AI Docker のヘルスチェック（既存の `docker compose ps`）
+  - **想定ファイル構成:**
+    ```
+    scripts/
+    ├── deploy.sh              # ワンショットセットアップ
+    ├── usecase-agent.service   # ダッシュボード systemd
+    ├── usecase-agent-run.service  # harness.ts 1回実行
+    ├── usecase-agent-run.timer    # 定期実行スケジュール
+    └── .env.example            # 環境変数テンプレート
+    ```
+- **影響範囲:** scripts/ (新規)、dashboard/server/index.ts (healthエンドポイント追加)、README.md (デプロイセクション更新)
+- **Depends on:** Phase 1テストrun実行（実際に動くことの確認が先）
