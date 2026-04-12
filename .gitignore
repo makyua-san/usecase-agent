@@ -42,5 +42,7 @@ Thumbs.db
 気づき.md
 
 package-lock.json
+bun.lock
 
 escape
+requirements.md

@@ -19,13 +19,14 @@
 
 ### Step 1: Run初期化
 
+harness.tsがrun_idを生成しプロンプト先頭に `RUN_ID=xxx` として注入する。また、runsテーブルへのINSERTもharness.tsが行う。
+
 ```bash
-# run_idを生成（タイムスタンプベース）
-run_id=$(date +%Y%m%d_%H%M%S)
+# run_idはharness.tsから注入される（プロンプト先頭の RUN_ID=xxx を使用）
+# 例: run_id=run-1712934567890
 
 # ログディレクトリとファイルを作成
-mkdir -p data/logs data/raw/${run_id} data/plans
-touch data/logs/${run_id}.log
+mkdir -p data/raw/${run_id} data/plans
 ```
 
 ログに記録: `[STARTED] run_id={run_id}`

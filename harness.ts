@@ -1,4 +1,5 @@
 import { initDb } from "./init-db";
+import { getDb } from "./lib/db";
 import { readFileSync, mkdirSync, existsSync } from "fs";
 
 const HARD_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
@@ -48,12 +49,19 @@ async function main() {
     process.exit(1);
   }
 
-  // Step 3: Generate run ID
+  // Step 3: Generate run ID and register in DB
   const runId = `run-${Date.now()}`;
   console.log(`Run ID: ${runId}`);
 
-  // Step 4: Read agent prompt
-  const promptContent = readFileSync("agent-prompt.md", "utf-8");
+  const db = getDb();
+  db.run(
+    "INSERT INTO runs (run_id, started_at, status) VALUES (?, datetime('now'), 'running')",
+    [runId]
+  );
+
+  // Step 4: Read agent prompt, inject run_id
+  let promptContent = readFileSync("agent-prompt.md", "utf-8");
+  promptContent = `RUN_ID=${runId}\nLOG_FILE=data/logs/${runId}.log\n\n${promptContent}`;
 
   // Step 5: Ensure log directory exists
   const logDir = "data/logs";
@@ -98,6 +106,12 @@ async function main() {
 
   const duration = ((Date.now() - startTime) / 1000).toFixed(1);
   const status = timedOut ? "timeout" : exitCode === 0 ? "success" : "error";
+
+  // Update run status in DB
+  db.run(
+    "UPDATE runs SET ended_at = datetime('now'), status = ? WHERE run_id = ?",
+    [status, runId]
+  );
 
   console.log(`Run complete: status=${status} exitCode=${exitCode} duration=${duration}s runId=${runId}`);
 

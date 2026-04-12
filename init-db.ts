@@ -1,11 +1,8 @@
-import { Database } from "bun:sqlite";
 import { existsSync, readFileSync } from "fs";
+import { getDb, DB_PATH } from "./lib/db";
 
-const DB_PATH = "data/usecase.db";
-
-export function initDb(): Database {
-  const db = new Database(DB_PATH, { create: true });
-  db.run("PRAGMA journal_mode=WAL");
+export function initDb() {
+  const db = getDb({ create: true });
 
   db.run(`CREATE TABLE IF NOT EXISTS runs (
     run_id TEXT PRIMARY KEY,
